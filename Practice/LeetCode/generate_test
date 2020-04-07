@@ -1,0 +1,39 @@
+#!/bin/bash
+
+#path=$1
+#files=$(ls $path)
+DIR=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
+#echo "DIR:"$DIR
+files=$(ls $DIR/solutions)
+for FILENAME in $files
+do
+    echo $FILENAME
+    EXT="${FILENAME##*.}"
+    if [ "cpp" != $EXT ]
+    then
+        continue
+    fi
+
+    #echo "EXT:"$EXT
+    SOLUTION="${FILENAME%.*}"
+    ID=$(echo ${SOLUTION} | sed 's/.[^.]*$//g')
+    SOLUTION=$(echo ${SOLUTION} | sed 's/^.*\.//g')
+    #echo "ID:"$ID
+    #echo "SOLUTION:"$SOLUTION
+
+    TARGET_PATH=${DIR}/test/${ID}.${SOLUTION}_test.cpp
+    FUNCTION=$(echo ${SOLUTION} | sed -e "s/\b\(.\)/\u\1/g")
+    FUNCTION=$(echo ${FUNCTION} | sed 's/-//g')
+    FUNCTION=$(echo ${FUNCTION} | sed 's/^\(.\)/\L\1/')
+    
+    #echo "FUNCTION:"$FUNCTION
+    if [ ! -f $TARGET_PATH ]; then
+        cp -f ${DIR}/template/0.template.cpp ${TARGET_PATH}
+
+        sed -i "s/isValid/$(expr ${FUNCTION})/g" \
+            ${TARGET_PATH}
+            
+        sed -i "s/DummyLeetCodeSolution.h/${ID}.${SOLUTION}.cpp/g" \
+            ${TARGET_PATH}
+    fi
+done
