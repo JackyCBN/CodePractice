@@ -21,18 +21,16 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     # Docs only available if this is the main app
     find_package(Doxygen)
     if(Doxygen_FOUND)
-	add_subdirectory(docs)
+	    add_subdirectory(docs)
     else()
-	message(STATUS "Doxygen not found, not building docs")
+	    message(STATUS "Doxygen not found, not building docs")
     endif()
 
 
     # FetchContent added in CMake 3.11, downloads during the configure step
     include(FetchContent)
     # FetchContent_MakeAvailable was not added until CMake 3.14
-    message(STATUS "top level config111")
     if(${CMAKE_VERSION} VERSION_LESS 3.14)
-        message(STATUS "top level config222")
         include(add_FetchContent_MakeAvailable.cmake)
     endif()
 endif()

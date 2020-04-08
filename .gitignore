@@ -44,4 +44,6 @@ Release/
 *DoNotShip/
 ipch/
 Build/
+build/
+_Build/
 _build/
