@@ -12,7 +12,7 @@ if(CMAKE_VERSION VERSION_LESS 3.11)
     include(DownloadProject)
     download_project(PROJ                googletest
 		     GIT_REPOSITORY      https://github.com/google/googletest.git
-		     GIT_TAG             release-1.8.0
+		     GIT_TAG             release-1.10.0
 		     UPDATE_DISCONNECTED 1
 		     QUIET
     )
@@ -25,7 +25,7 @@ else()
     include(FetchContent)
     FetchContent_Declare(googletest
         GIT_REPOSITORY      https://github.com/google/googletest.git
-        GIT_TAG             release-1.8.0)
+        GIT_TAG             release-1.10.0)
     FetchContent_GetProperties(googletest)
     if(NOT googletest_POPULATED)
         FetchContent_Populate(googletest)
@@ -51,7 +51,7 @@ set_target_properties(check PROPERTIES FOLDER "Scripts")
 # More modern way to do the last line, less messy but needs newish CMake:
 # target_include_directories(gtest INTERFACE ${gtest_SOURCE_DIR}/include)
 
-
+message(STATUS "GOOGLE_TEST_INDIVIDUAL:${GOOGLE_TEST_INDIVIDUAL}")
 if(GOOGLE_TEST_INDIVIDUAL)
     if(NOT CMAKE_VERSION VERSION_LESS 3.9)
         include(GoogleTest)
