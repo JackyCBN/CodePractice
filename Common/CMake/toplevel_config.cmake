@@ -2,6 +2,7 @@
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
     message(STATUS "top level config")
+    include(utility)
 	enable_testing()
 	
     # Optionally set things like CMAKE_CXX_STANDARD, CMAKE_POSITION_INDEPENDENT_CODE here
