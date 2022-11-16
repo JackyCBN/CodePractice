@@ -10,8 +10,10 @@ void singleThreadTest()
 {
 
 }
-const int testCount = 20000;
-const int jobCount = 100;
+const int testCount = 10;
+const int minGranularity = 100;
+
+const int maxJobCount = 1000;
 //#define LOG_ENABLE 1
 struct taskData
 {
@@ -25,8 +27,9 @@ struct taskData
 struct schedulerContext
 {
     int threadNums;
-    std::thread threads[1000];
-    int taskResults[1000];
+    int jobCount = 0;
+    std::thread threads[maxJobCount];
+    int taskResults[maxJobCount];
     std::mutex globalTaskQueueMutex;
     std::queue<taskData> globalTaskQueue;
     std::atomic<bool> threadShouldRun;
@@ -67,7 +70,10 @@ void Execute(taskData& task)
 void WaitUntilTaskIsAvailable()
 {
     std::unique_lock<std::mutex> lock(gContext.globalTaskQueueMutex);
-    gContext.cv.wait(lock, []{return !gContext.globalTaskQueue.empty();});
+    gContext.cv.wait(lock, []{
+        // when quit,  this thread need awaked
+        return !gContext.threadShouldRun || !gContext.globalTaskQueue.empty();
+        });
 }
 void WorkOnTasks( int index)
 {
@@ -75,10 +81,17 @@ void WorkOnTasks( int index)
 
     while (gContext.threadShouldRun)
     {
+        #ifdef LOG_ENABLE
         cout<<"WorkOnTasks ..."<<index<<endl;
+        #endif
         WaitUntilTaskIsAvailable();
         
-cout<<"WorkOnTasks after wait..."<<index<<endl;
+        #ifdef LOG_ENABLE
+        cout<<"WorkOnTasks after wait..."<<index<<endl;
+        #endif
+        if (!gContext.threadShouldRun) {
+            break;
+        }
         taskData task;
         LockSynchronizationPrimitive();
 
@@ -86,7 +99,7 @@ cout<<"WorkOnTasks after wait..."<<index<<endl;
         {
                 task = gContext.globalTaskQueue.front();
                 gContext.globalTaskQueue.pop();
-                gContext.threadShouldRun = !gContext.globalTaskQueue.empty();
+                
                 #ifdef LOG_ENABLE
                 std::cout<<"run task : " << task.index <<endl;
                 #endif
@@ -113,12 +126,35 @@ void WaitUntilTasksAreFinished(schedulerContext* pContext)
 {
     cout<<"WaitUntilTasksAreFinished ..."<<endl;
 
+
+    while(true)
+    { 
+        LockSynchronizationPrimitive();
+        gContext.threadShouldRun = !gContext.globalTaskQueue.empty();
+        UnlockSynchronizationPrimitive();
+
+        if(gContext.threadShouldRun)
+        {
+            std::this_thread::yield();
+        }
+        else
+        {
+            gContext.cv.notify_all();
+            break;
+        }
+    }
     for(int i=0; i<pContext->threadNums; ++i)
     {
-        cout<<"finish 00 " <<i<<endl;
-        pContext->threads[i].join(); //?
-        cout<<"finish " <<i<<endl;
+        #ifdef LOG_ENABLE
+        cout<<"try finish : " <<i<<endl;
+        #endif
+        pContext->threads[i].join(); 
+        #ifdef LOG_ENABLE
+        cout<<"finish " << i <<endl;
+        #endif
     }
+    cout<<"all finish " <<endl;
+    
 }
 
 void AddTaskToScheduler(taskData task)
@@ -138,15 +174,21 @@ void jobTest(schedulerContext* pContext)
     // create work thread
         // wait startup
     CreateWorkerThreads(pContext);
-    int count = jobCount;
-    int gap = testCount / count;
 
-    for(int i=0; i<count; ++i)
+    int jobCount = 0;
+    jobCount = (testCount + minGranularity - 1) / minGranularity;
+    jobCount = jobCount<maxJobCount ? jobCount : maxJobCount;
+    pContext->jobCount = jobCount;
+    
+    int gap = testCount / jobCount;
+cout<<"jobCount:"<<jobCount<< " "<<gap<<" "<<endl;
+    for(int i=0; i<jobCount; ++i)
     {
         taskData t;
         t.loopCount = gap;
         t.index = i;
-        t.nums = (i == count-1) ? testCount - i-gap : gap;
+        t.startPoint = i*gap ;
+        t.nums = (i == jobCount-1) ? testCount - i*gap : gap;
 
         AddTaskToScheduler(t);
     }
@@ -176,7 +218,7 @@ int main()
      begin = std::chrono::steady_clock::now();
      int result2 = 0;
      jobTest(&gContext);
-     for(int i=0; i!=jobCount; i++)
+     for(int i=0; i!=gContext.jobCount; i++)
      {
         result2 += gContext.taskResults[i];
      }
